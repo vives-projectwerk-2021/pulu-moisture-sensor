@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cstdio>
 
+
+
 MoistureSensors::MoistureSensors(I2C *i2c)
 {
     this->i2c = i2c;
@@ -116,23 +118,28 @@ void MoistureSensors::writeConfigRegisters(int channel, double gain, int16_t off
         (enable << 4) | 
         0x0000;
 
+
+    char cmd[3];
     // set global configuration register
-    i2c->write(MoistAddr, (char[]){
+    cmd = {
         FDC_CONFIG_POINTER,
         char((configure >> 8) & 0xff),
-        char((0b1000 >> channel) << 4)}, 3);
+        char((0b1000 >> channel) << 4)};
+    i2c->write(MoistAddr, cmd, 3);
 
     // set channel configuration register
-    i2c->write(MoistAddr, (char[]){
+    cmd = {
         FDC_CHANNEL_CONFIG_POINTERS[channel], 
         char(0b00011100 | (channel << 5)), 
-        0x00}, 3);
+        0x00};
+    i2c->write(MoistAddr, cmd, 3);
 
     // set channel offset register
-    i2c->write(MoistAddr, (char[]){
+    cmd = {
         FDC_CHANNEL_OFSET_POINTERS[channel], 
         char((offset >> 8) & 0xff), 
-        char(offset & 0xff)}, 3);
+        char(offset & 0xff)};
+    i2c->write(MoistAddr, cmd , 3);
 
     // set channel gain register
     int gainIntegerPart = int(gain);
@@ -142,11 +149,12 @@ void MoistureSensors::writeConfigRegisters(int channel, double gain, int16_t off
     if (gainIntegerPart <= 0b00)    gainIntegerPart = 0b00;
 
     int16_t gainReg = (gainIntegerPart << 14) | int(gainDecimalPart*pow(2, 14));
-
-    i2c->write(MoistAddr, (char[]){
+    
+    cmd = {
         FDC_CHANNEL_GAIN_POINTERS[channel], 
         char((gainReg >> 8) & 0xff), 
-        char(gainReg & 0xff)}, 3);
+        char(gainReg & 0xff)};
+    i2c->write(MoistAddr, cmd, 3);
 
     // example
     // i2c.write(device_address, (char[]){reg_pointer, data1, data2}, 3);
