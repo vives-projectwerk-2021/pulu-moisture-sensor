@@ -1,5 +1,4 @@
 #include "mbed.h"
-#include "PinMap.h"
 #include "MoistureSensors.h"
 #include <cstdint>
 #include <cstdio>
@@ -30,10 +29,10 @@ int16_t MoistureSensors::readFdcChannel(int channel, bool calibrated)
     double gain;
     int16_t offset;
 
+    // calculate gain and offset for the lower and higher values
     if (calibrated && calibrationStatus == 0b11) {
         gain = (pow(2,15)-0.0)/(higherValues[channel]-lowerValues[channel]);
         offset = -lowerValues[channel];
-        //printf("gain:\t%i, offset:\t%i\r\n", int(gain*1000), offset);
     }
     else {
         gain = 1;
@@ -57,31 +56,26 @@ int16_t MoistureSensors::readFdcChannel(int channel, bool calibrated)
     return output;
 }
 
-void MoistureSensors::readFdcChannels(int16_t *results) 
+void MoistureSensors::readFdcChannels(int16_t *results, int numSamples, bool calibrated) 
 {
-    //printf("Lower values: \t%i\t%i\t%i\t%i\t \r\n", lowerValues[0], lowerValues[1], lowerValues[2], lowerValues[3]);
-    //printf("Higher values: \t%i\t%i\t%i\t%i\t \r\n", higherValues[0], higherValues[1], higherValues[2], higherValues[3]);
-    for (int i=0; i<channels; i++)
+    for (int j=0; j<CHANNELS; j++)
     {
-        results[i] = readFdcChannel(i, true);
-    }
-}
-
-void MoistureSensors::readUncalibratedFdcChannels(int16_t *results) 
-{
-    for (int i=0; i<channels; i++)
-    {
-        results[i] = readFdcChannel(i, false);
+        int sum = 0;
+        for (int i=0; i<numSamples; i++) 
+        {
+            sum += readFdcChannel(j, calibrated);
+        }
+        results[j] = sum/numSamples;
     }
 }
 
 void MoistureSensors::calibrateFdcLowestPoint()
 {
+    // read uncalibrted measurments
+    readFdcChannels(lowerValues, calibrationSampleCount, false);
 
-    getAverage(lowerValues, calibrationSampleCount, false);
-
-    // subtract 100 units margin to the lower values
-    for (int i=0; i<channels; i++)
+    // apply some headroom for the calibration measurments
+    for (int i=0; i<CHANNELS; i++)
     {
         lowerValues[i] -= calibrationMargin;
     }
@@ -91,10 +85,11 @@ void MoistureSensors::calibrateFdcLowestPoint()
 
 void MoistureSensors::calibrateFdcHighestPoint()
 {
-    getAverage(higherValues, calibrationSampleCount, false);
+    // read uncalibrted measurments
+    readFdcChannels(higherValues, calibrationSampleCount, false);
 
-    // add x units margin to the higher values
-    for (int i=0; i<channels; i++)
+    // apply some headroom for the calibration measurments
+    for (int i=0; i<CHANNELS; i++)
     {
         higherValues[i] += calibrationMargin;
     }
@@ -104,10 +99,10 @@ void MoistureSensors::calibrateFdcHighestPoint()
 
 void MoistureSensors::writeConfigRegisters(int channel, double gain, int16_t offset) 
 {
-    bool reset = false;             // reset: reset the device
-    int measurment_rate = 2;        // measurment rate: 1 = 100Hz, 2 = 200Hz, 3 = 400Hz
-    bool repeat = false;             // repeat measurment: false = one shot measurment
-    int enable = 0b1000 >> channel;    // enable selected channel
+    bool reset = false;                 // reset: reset the device
+    int measurment_rate = 2;            // measurment rate: 1 = 100Hz, 2 = 200Hz, 3 = 400Hz
+    bool repeat = false;                // repeat measurment: false = one shot measurment
+    int enable = 0b1000 >> channel;     // enable selected channel
 
     uint16_t configure = 
         (reset << 15) | 
@@ -141,6 +136,7 @@ void MoistureSensors::writeConfigRegisters(int channel, double gain, int16_t off
     int gainIntegerPart = int(gain);
     double gainDecimalPart = gain - gainIntegerPart;
 
+    // clamp gain between 0 - 4
     if (gainIntegerPart >= 0b11)    gainIntegerPart = 0b11;
     if (gainIntegerPart <= 0b00)    gainIntegerPart = 0b00;
 
@@ -151,27 +147,11 @@ void MoistureSensors::writeConfigRegisters(int channel, double gain, int16_t off
         char((gainReg >> 8) & 0xff), 
         char(gainReg & 0xff)};
     i2c->write(MoistAddr, data_ch_gain, 3);
-
-    // example
-    // i2c.write(device_address, (char[]){reg_pointer, data1, data2}, 3);
 }
 
 void MoistureSensors::waitForMeasurment() 
 {
     while (checkMeasurmenStatus() == 0) {
         ThisThread::sleep_for(1ms);
-    }
-}
-
-void MoistureSensors::getAverage(int16_t *values, int numSamples, bool calibrated) 
-{
-    for (int j=0; j<channels; j++)
-    {
-        int sum = 0;
-        for (int i=0; i<numSamples; i++) 
-        {
-            sum += readFdcChannel(j, calibrated);
-        }
-        values[j] = sum/numSamples;
     }
 }
