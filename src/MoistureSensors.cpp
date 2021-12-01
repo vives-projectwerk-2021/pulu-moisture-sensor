@@ -100,7 +100,7 @@ void MoistureSensors::calibrateFdcHighestPoint()
 void MoistureSensors::writeConfigRegisters(int channel, double gain, int16_t offset) 
 {
     bool reset = false;                 // reset: reset the device
-    int measurment_rate = 2;            // measurment rate: 1 = 100Hz, 2 = 200Hz, 3 = 400Hz
+    int measurment_rate = 1;            // measurment rate: 1 = 100Hz, 2 = 200Hz, 3 = 400Hz
     bool repeat = false;                // repeat measurment: false = one shot measurment
     int enable = 0b1000 >> channel;     // enable selected channel
 
