@@ -16,7 +16,7 @@ class MoistureSensors {
         void ResetFDM();
 
         // get all four calibrated measurments
-        void readFdcChannels(int16_t *results, int numSamples, bool calibrated);
+        void readFdcChannels(int16_t *results, int numSamples = 1, bool calibrated = false);
 
         // trigger calibration for the lowest possible capacitance (moisture content)
         void calibrateFdcLowestPoint();
