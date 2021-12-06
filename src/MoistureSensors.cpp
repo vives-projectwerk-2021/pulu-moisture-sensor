@@ -1,5 +1,4 @@
 #include "mbed.h"
-#include "PinMap.h"
 #include "MoistureSensors.h"
 #include <cstdint>
 #include <cstdio>
