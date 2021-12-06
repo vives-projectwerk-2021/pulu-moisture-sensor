@@ -4,16 +4,7 @@ library for the pulu moisture sensor
 ## example
 ```c
 #include "mbed.h"
-#include "MoistureSensors.h"
-
-float interpolation(float x0, float y0, float x1, float y1, float xp)
-{
-    // Linear Interpolation 
-    return y0 + ((y1-y0)/(x1-x0)) * (xp - x0);
-}
-
-DigitalIn button1(MY_BUTTON1);
-DigitalIn button2(MY_BUTTON2);
+#include "pulu-moisture-sensor/src/MoistureSensors.h"
 
 I2C i2c(I2C_SDA, I2C_SCL);
 
@@ -22,17 +13,12 @@ MoistureSensors moist(&i2c);
 int main()
 {
     while (1) 
-    {        
-        if (!button1) {
-            moist.calibrateFdcHighestPoint();
-        }
-
-        if (!button2) {
-            moist.calibrateFdcLowestPoint();
-        }
-
+    {
+        uint16_t samplesPerMeasurment = 5;
+        bool calibratedMeasurments = false;
+        
         int16_t results[4];
-        moist.readFdcChannels(results);
+        moist.readFdcChannels(results, samplesPerMeasurment, calibratedMeasurments);
 
         ThisThread::sleep_for(500ms);
 
