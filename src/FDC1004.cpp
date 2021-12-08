@@ -1,20 +1,20 @@
 #include "mbed.h"
-#include "MoistureSensors.h"
+#include "FDC1004.h"
 #include <cstdint>
 #include <cstdio>
 
-MoistureSensors::MoistureSensors(I2C *i2c)
+FDC1004::FDC1004(I2C *i2c)
 {
     this->i2c = i2c;
 }
 
-void MoistureSensors::ResetFDM()
+void FDC1004::ResetFDM()
 {
     char cmd[3] {FDC_CONFIG_POINTER, 0x80, 0x00};
     i2c->write(MoistAddr, cmd, 3);           // Write adress/command byte, then register address
 }
 
-int MoistureSensors::checkMeasurmenStatus() 
+int FDC1004::checkMeasurmenStatus() 
 {
     char cmd[2] = {FDC_CONFIG_POINTER, 0x00};
     i2c->write(MoistAddr, cmd, 1);
@@ -24,7 +24,7 @@ int MoistureSensors::checkMeasurmenStatus()
     return conf & 0x0f;
 }
 
-int16_t MoistureSensors::readFdcChannel(int channel, bool calibrated) 
+int16_t FDC1004::readFdcChannel(int channel, bool calibrated) 
 {
     double gain;
     int16_t offset;
@@ -56,7 +56,7 @@ int16_t MoistureSensors::readFdcChannel(int channel, bool calibrated)
     return output;
 }
 
-void MoistureSensors::readFdcChannels(int16_t *results, int numSamples, bool calibrated) 
+void FDC1004::readFdcChannels(int16_t *results, int numSamples, bool calibrated) 
 {
     for (int j=0; j<CHANNELS; j++)
     {
@@ -69,7 +69,7 @@ void MoistureSensors::readFdcChannels(int16_t *results, int numSamples, bool cal
     }
 }
 
-void MoistureSensors::calibrateFdcLowestPoint()
+void FDC1004::calibrateFdcLowestPoint()
 {
     // read uncalibrted measurments
     readFdcChannels(lowerValues, calibrationSampleCount, false);
@@ -83,7 +83,7 @@ void MoistureSensors::calibrateFdcLowestPoint()
     calibrationStatus |= 0b01;
 }
 
-void MoistureSensors::calibrateFdcHighestPoint()
+void FDC1004::calibrateFdcHighestPoint()
 {
     // read uncalibrted measurments
     readFdcChannels(higherValues, calibrationSampleCount, false);
@@ -97,7 +97,7 @@ void MoistureSensors::calibrateFdcHighestPoint()
     calibrationStatus |= 0b10;
 }
 
-void MoistureSensors::writeConfigRegisters(int channel, double gain, int16_t offset) 
+void FDC1004::writeConfigRegisters(int channel, double gain, int16_t offset) 
 {
     bool reset = false;                 // reset: reset the device
     int measurment_rate = 1;            // measurment rate: 1 = 100Hz, 2 = 200Hz, 3 = 400Hz
@@ -149,7 +149,7 @@ void MoistureSensors::writeConfigRegisters(int channel, double gain, int16_t off
     i2c->write(MoistAddr, data_ch_gain, 3);
 }
 
-void MoistureSensors::waitForMeasurment() 
+void FDC1004::waitForMeasurment() 
 {
     while (checkMeasurmenStatus() == 0) {
         ThisThread::sleep_for(1ms);

@@ -1,16 +1,16 @@
-#ifndef MOISTURESENSORS_H
-#define MOISTURESENSORS_H
+#ifndef FDC1004_H
+#define FDC1004_H
 #include "I2C.h"
 #include "mbed.h"
 #include <cstdint>
 
 #define CHANNELS 4
 
-class MoistureSensors {
+class FDC1004 {
     // public methods
     public:
         // constructor
-        MoistureSensors(I2C *i2c);
+        FDC1004(I2C *i2c);
     
         // reset the fdc chip
         void ResetFDM();
