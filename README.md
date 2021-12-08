@@ -4,11 +4,11 @@ library for the pulu moisture sensor
 ## example
 ```c
 #include "mbed.h"
-#include "pulu-moisture-sensor/src/MoistureSensors.h"
+#include "FDC1004.h"
 
 I2C i2c(I2C_SDA, I2C_SCL);
 
-MoistureSensors moist(&i2c);
+FDC1004 moist(&i2c, 0x50 << 1);
 
 int main()
 {
