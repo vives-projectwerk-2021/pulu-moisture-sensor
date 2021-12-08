@@ -9,10 +9,13 @@ FDC1004::FDC1004(I2C *i2c, uint8_t address)
     this->address = address;
 }
 
-void FDC1004::ResetFDM()
+/** Reset
+ * @return 0 on success
+ */
+bool FDC1004::ResetFDM()
 {
     char cmd[3] {FDC_CONFIG_POINTER, 0x80, 0x00};
-    i2c->write(address, cmd, 3);           // Write adress/command byte, then register address
+    return i2c->write(address, cmd, 3);
 }
 
 int FDC1004::checkMeasurmenStatus() 
@@ -25,7 +28,10 @@ int FDC1004::checkMeasurmenStatus()
     return conf & 0x0f;
 }
 
-int16_t FDC1004::readFdcChannel(int channel, bool calibrated) 
+/** 
+ * @return 0 on success
+ */
+bool FDC1004::readFdcChannel(int16_t &value, int channel, bool calibrated) 
 {
     double gain;
     int16_t offset;
@@ -40,40 +46,59 @@ int16_t FDC1004::readFdcChannel(int channel, bool calibrated)
         offset = 0;
     }
 
-    writeConfigRegisters(channel, gain, offset);
+    bool err = writeConfigRegisters(channel, gain, offset);
+    if(err) { return true; }
 
     // wait for the device to complete measurment
     waitForMeasurment();
 
     char cmd[3] = {FDC_READ_CHANNEL_POINTERS[channel], 0x00};
-
-    i2c->write(address, cmd, 1);
-    i2c->read(address, cmd, 2);
+    bool ack;
+    ack = i2c->write(address, cmd, 1);
+    if(ack) { return true; }
+    ack = i2c->read(address, cmd, 2);
+    if(ack) { return true; }
 
     int16_t output = cmd[0]<<8|cmd[1];
+    value = output;
 
-    ResetFDM();
-
-    return output;
+    return ResetFDM();
 }
 
-void FDC1004::readFdcChannels(int16_t *results, int numSamples, bool calibrated) 
+/** 
+ * @return 0 on success
+ */
+bool FDC1004::readFdcChannels(int16_t *results, int numSamples, bool calibrated) 
 {
     for (int j=0; j<CHANNELS; j++)
     {
         int sum = 0;
         for (int i=0; i<numSamples; i++) 
         {
-            sum += readFdcChannel(j, calibrated);
+            int16_t value;
+            bool err = readFdcChannel(value, j, calibrated);
+            if(err) 
+            { 
+                for(int c=0; c<CHANNELS; c++) {
+                    results[c] = 0;
+                }
+                return true;
+            }
+            sum += value;
         }
         results[j] = sum/numSamples;
     }
+    return false;
 }
 
-void FDC1004::calibrateFdcLowestPoint()
+/** 
+ * @return 0 on success
+ */
+bool FDC1004::calibrateFdcLowestPoint()
 {
     // read uncalibrted measurments
-    readFdcChannels(lowerValues, calibrationSampleCount, false);
+    bool err = readFdcChannels(lowerValues, calibrationSampleCount, false);
+    if(err) { return true; }
 
     // apply some headroom for the calibration measurments
     for (int i=0; i<CHANNELS; i++)
@@ -82,12 +107,17 @@ void FDC1004::calibrateFdcLowestPoint()
     }
 
     calibrationStatus |= 0b01;
+    return false;
 }
 
-void FDC1004::calibrateFdcHighestPoint()
+/** 
+ * @return 0 on success
+ */
+bool FDC1004::calibrateFdcHighestPoint()
 {
     // read uncalibrted measurments
-    readFdcChannels(higherValues, calibrationSampleCount, false);
+    bool err = readFdcChannels(higherValues, calibrationSampleCount, false);
+    if(err) { return true; }
 
     // apply some headroom for the calibration measurments
     for (int i=0; i<CHANNELS; i++)
@@ -96,10 +126,15 @@ void FDC1004::calibrateFdcHighestPoint()
     }
 
     calibrationStatus |= 0b10;
+    return false;
 }
 
-void FDC1004::writeConfigRegisters(int channel, double gain, int16_t offset) 
+/** 
+ * @return 0 on success
+ */
+bool FDC1004::writeConfigRegisters(int channel, double gain, int16_t offset) 
 {
+    bool ack;
     bool reset = false;                 // reset: reset the device
     int measurment_rate = 1;            // measurment rate: 1 = 100Hz, 2 = 200Hz, 3 = 400Hz
     bool repeat = false;                // repeat measurment: false = one shot measurment
@@ -117,21 +152,24 @@ void FDC1004::writeConfigRegisters(int channel, double gain, int16_t offset)
         FDC_CONFIG_POINTER,
         char((configure >> 8) & 0xff),
         char((0b1000 >> channel) << 4)};
-    i2c->write(address, data_global_conf, 3);
+    ack = i2c->write(address, data_global_conf, 3);
+    if(ack) { return true; }
 
     // set channel configuration register
     char data_ch_conf[] = {
         FDC_CHANNEL_CONFIG_POINTERS[channel], 
         char(0b00011100 | (channel << 5)), 
         0x00};
-    i2c->write(address, data_ch_conf, 3);
+    ack = i2c->write(address, data_ch_conf, 3);
+    if(ack) { return true; }
 
     // set channel offset register
     char data_ch_offset[] = {
         FDC_CHANNEL_OFSET_POINTERS[channel], 
         char((offset >> 8) & 0xff), 
         char(offset & 0xff)};
-    i2c->write(address, data_ch_offset, 3);
+    ack = i2c->write(address, data_ch_offset, 3);
+    if(ack) { return true; }
 
     // set channel gain register
     int gainIntegerPart = int(gain);
@@ -147,7 +185,9 @@ void FDC1004::writeConfigRegisters(int channel, double gain, int16_t offset)
         FDC_CHANNEL_GAIN_POINTERS[channel], 
         char((gainReg >> 8) & 0xff), 
         char(gainReg & 0xff)};
-    i2c->write(address, data_ch_gain, 3);
+    ack = i2c->write(address, data_ch_gain, 3);
+    if(ack) { return true; }
+    return false;
 }
 
 void FDC1004::waitForMeasurment() 

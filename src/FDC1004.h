@@ -13,16 +13,16 @@ class FDC1004 {
         FDC1004(I2C *i2c, uint8_t address);
     
         // reset the fdc chip
-        void ResetFDM();
+        bool ResetFDM();
 
         // get all four calibrated measurments
-        void readFdcChannels(int16_t *results, int numSamples = 1, bool calibrated = false);
+        bool readFdcChannels(int16_t *results, int numSamples = 1, bool calibrated = false);
 
         // trigger calibration for the lowest possible capacitance (moisture content)
-        void calibrateFdcLowestPoint();
+        bool calibrateFdcLowestPoint();
 
         // trigger calibration for the highest possible capacitance (moisture content)
-        void calibrateFdcHighestPoint();
+        bool calibrateFdcHighestPoint();
 
     // public variables
     public:
@@ -57,9 +57,9 @@ class FDC1004 {
         int checkMeasurmenStatus();
 
         // read single fdc channel measurments
-        int16_t readFdcChannel(int ch, bool calibrated);
+        bool readFdcChannel(int16_t &value, int ch, bool calibrated);
 
-        void writeConfigRegisters(int channel, double gain, int16_t offset);
+        bool writeConfigRegisters(int channel, double gain, int16_t offset);
 
         void waitForMeasurment();
 };
