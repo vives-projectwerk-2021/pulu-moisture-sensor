@@ -10,7 +10,7 @@ class FDC1004 {
     // public methods
     public:
         // constructor
-        FDC1004(I2C *i2c);
+        FDC1004(I2C *i2c, uint8_t address);
     
         // reset the fdc chip
         void ResetFDM();
@@ -31,6 +31,7 @@ class FDC1004 {
 
     private:
         I2C *i2c;
+        uint8_t address;
 
     private:
         const int calibrationSampleCount = 100;     //take average from 100 samples for calibration
@@ -38,8 +39,6 @@ class FDC1004 {
     
     // adresses and pointers
     private:
-        const char MoistAddr = 0xA0;                 // FDC1004 address:    0x50<<1
-
         const char FDC_CHANNEL_CONFIG_POINTERS[CHANNELS] = {0x08, 0x09, 0x0A, 0x0B};
         const char FDC_READ_CHANNEL_POINTERS[CHANNELS] = {0x00, 0x02, 0x04, 0x06};
         const char FDC_CHANNEL_OFSET_POINTERS[CHANNELS] = {0x0D, 0x0E, 0x0F, 0x10};

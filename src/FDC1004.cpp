@@ -3,22 +3,23 @@
 #include <cstdint>
 #include <cstdio>
 
-FDC1004::FDC1004(I2C *i2c)
+FDC1004::FDC1004(I2C *i2c, uint8_t address)
 {
     this->i2c = i2c;
+    this->address = address;
 }
 
 void FDC1004::ResetFDM()
 {
     char cmd[3] {FDC_CONFIG_POINTER, 0x80, 0x00};
-    i2c->write(MoistAddr, cmd, 3);           // Write adress/command byte, then register address
+    i2c->write(address, cmd, 3);           // Write adress/command byte, then register address
 }
 
 int FDC1004::checkMeasurmenStatus() 
 {
     char cmd[2] = {FDC_CONFIG_POINTER, 0x00};
-    i2c->write(MoistAddr, cmd, 1);
-    i2c->read(MoistAddr, cmd, 2);
+    i2c->write(address, cmd, 1);
+    i2c->read(address, cmd, 2);
     uint16_t conf = cmd[0]<<8|cmd[1];
     
     return conf & 0x0f;
@@ -46,8 +47,8 @@ int16_t FDC1004::readFdcChannel(int channel, bool calibrated)
 
     char cmd[3] = {FDC_READ_CHANNEL_POINTERS[channel], 0x00};
 
-    i2c->write(MoistAddr, cmd, 1);
-    i2c->read(MoistAddr, cmd, 2);
+    i2c->write(address, cmd, 1);
+    i2c->read(address, cmd, 2);
 
     int16_t output = cmd[0]<<8|cmd[1];
 
@@ -116,21 +117,21 @@ void FDC1004::writeConfigRegisters(int channel, double gain, int16_t offset)
         FDC_CONFIG_POINTER,
         char((configure >> 8) & 0xff),
         char((0b1000 >> channel) << 4)};
-    i2c->write(MoistAddr, data_global_conf, 3);
+    i2c->write(address, data_global_conf, 3);
 
     // set channel configuration register
     char data_ch_conf[] = {
         FDC_CHANNEL_CONFIG_POINTERS[channel], 
         char(0b00011100 | (channel << 5)), 
         0x00};
-    i2c->write(MoistAddr, data_ch_conf, 3);
+    i2c->write(address, data_ch_conf, 3);
 
     // set channel offset register
     char data_ch_offset[] = {
         FDC_CHANNEL_OFSET_POINTERS[channel], 
         char((offset >> 8) & 0xff), 
         char(offset & 0xff)};
-    i2c->write(MoistAddr, data_ch_offset, 3);
+    i2c->write(address, data_ch_offset, 3);
 
     // set channel gain register
     int gainIntegerPart = int(gain);
@@ -146,7 +147,7 @@ void FDC1004::writeConfigRegisters(int channel, double gain, int16_t offset)
         FDC_CHANNEL_GAIN_POINTERS[channel], 
         char((gainReg >> 8) & 0xff), 
         char(gainReg & 0xff)};
-    i2c->write(MoistAddr, data_ch_gain, 3);
+    i2c->write(address, data_ch_gain, 3);
 }
 
 void FDC1004::waitForMeasurment() 
