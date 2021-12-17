@@ -24,6 +24,9 @@ class FDC1004 {
         // trigger calibration for the highest possible capacitance (moisture content)
         bool calibrateFdcHighestPoint();
 
+        void setCalibrationLowestPoint(int16_t* values);
+        void setCalibrationHighestPoint(int16_t* values);
+
     // public variables
     public:
         // returns true if both the high and low sides have been calibrated

@@ -129,6 +129,21 @@ bool FDC1004::calibrateFdcHighestPoint()
     return false;
 }
 
+void FDC1004::setCalibrationLowestPoint(int16_t* values) {
+    for (int i=0; i<CHANNELS; i++)
+    {
+        lowerValues[i] = values[i];
+    }
+    calibrationStatus |= 0b01;
+}
+void FDC1004::setCalibrationHighestPoint(int16_t* values) {
+    for (int i=0; i<CHANNELS; i++)
+    {
+        higherValues[i] = values[i];
+    }
+    calibrationStatus |= 0b10;
+}
+
 /** 
  * @return 0 on success
  */
